@@ -14,4 +14,5 @@ Please place the above file into `data/GoogleNews-vectors-negative300.bin`
 ## Based on Phrase2Vec Implementation
 
 This phrase to Vec Implementation is based on an implementation by Aerin Kim
+
 Link - https://bitbucket.org/yunazzang/aiwiththebest_byor
