@@ -14,7 +14,6 @@ TRAIN_FILE = dir_name + '/dataset/train.csv'
 TEST_FILE = dir_name + '/dataset/test.csv'
 THRESHOLD_VALUE = 0.8
 translator = str.maketrans(' ',' ', string.punctuation)
-SECRET_CODE = '%^&#$*'
 
 model_filename = dir_name+'/data/google_p2v_model'
 if not os.path.exists(model_filename):
@@ -119,8 +118,8 @@ def get_token_similarity(vector1, vector2):
     return vector1.get_token_similarity(vector2)
 
 
-def get_predict_score(w2v_score, pos_score):
-    return 1 if (w2v_score+pos_score) / 2 > THRESHOLD_VALUE else 0
+def get_predict_score(w2v_score):
+    return 1 if (w2v_score) > THRESHOLD_VALUE else 0
 
 if __name__ == '__main__':
 
@@ -128,17 +127,16 @@ if __name__ == '__main__':
     train_contents = pd.np.array(train_contents)
     header = train_contents[0]
     train_contents = train_contents[1:]
-    label_train = train_contents[:, 5]
+    label_train = train_contents[:, 5].astype(int)
     feature_train = train_contents[:, 3:5]
     phrase_vectors1 = translate(feature_train[:, 0].astype(str), table=translator)
     phrase_vectors2 = translate(feature_train[:, 1].astype(str), table=translator)
     phrase_vectors1 = np.vectorize(get_phrase_vector)(phrase_vectors1)
     phrase_vectors2 = np.vectorize(get_phrase_vector)(phrase_vectors2)
-    pos_score = np.vectorize(get_token_similarity, otypes=[np.float64])(phrase_vectors1, phrase_vectors2)
     w2v_score = np.vectorize(get_cosine_similarity, otypes=[np.float64])(phrase_vectors1, phrase_vectors2)
 
     from sklearn.metrics import accuracy_score
-    predict_label = np.vectorize(get_predict_score)(w2v_score, pos_score)
+    predict_label = np.vectorize(get_predict_score)(w2v_score)
     accuracy = accuracy_score(predict_label, label_train)
     print('Accuracy: ', accuracy)
 
