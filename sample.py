@@ -107,7 +107,7 @@ class PhraseVector:
 
 
 def get_phrase_vector(value):
-    return PhraseVector(value)
+    return PhraseVector(value).vector
 
 
 def get_cosine_similarity(vector1, vector2):
@@ -121,22 +121,32 @@ def get_token_similarity(vector1, vector2):
 def get_predict_score(w2v_score):
     return 1 if (w2v_score) > THRESHOLD_VALUE else 0
 
+
+def get_features(features):
+    phrase_vectors1 = translate(features[:, 0].astype(str), table=translator)
+    phrase_vectors2 = translate(features[:, 1].astype(str), table=translator)
+    phrase_vectors1 = np.vectorize(get_phrase_vector)(phrase_vectors1)
+    phrase_vectors2 = np.vectorize(get_phrase_vector)(phrase_vectors2)
+    # w2v_score = np.vectorize(get_cosine_similarity, otypes=[np.float64])(phrase_vectors1, phrase_vectors2)
+    features = np.concatenate((phrase_vectors1, phrase_vectors2), axis=1)
+    return features
+
 if __name__ == '__main__':
 
     train_contents = pd.read_csv(TRAIN_FILE)
     train_contents = pd.np.array(train_contents)
     header = train_contents[0]
     train_contents = train_contents[1:]
-    label_train = train_contents[:, 5].astype(int)
-    feature_train = train_contents[:, 3:5]
-    phrase_vectors1 = translate(feature_train[:, 0].astype(str), table=translator)
-    phrase_vectors2 = translate(feature_train[:, 1].astype(str), table=translator)
-    phrase_vectors1 = np.vectorize(get_phrase_vector)(phrase_vectors1)
-    phrase_vectors2 = np.vectorize(get_phrase_vector)(phrase_vectors2)
-    w2v_score = np.vectorize(get_cosine_similarity, otypes=[np.float64])(phrase_vectors1, phrase_vectors2)
-
+    labels = train_contents[:, 5].astype(int)
+    features = train_contents[:, 3:5]
+    from sklearn.model_selection import train_test_split
+    feature_train, label_train, feature_test, label_test = train_test_split(features, labels)
+    feature_train = get_features(feature_train)
+    from sklearn.neural_network import MLPClassifier
+    clf = MLPClassifier(feature_train, label_train)
+    predict_label = clf.predict(get_features(features=feature_test))
     from sklearn.metrics import accuracy_score
-    predict_label = np.vectorize(get_predict_score)(w2v_score)
+    # predict_label = np.vectorize(get_predict_score)(w2v_score)
     accuracy = accuracy_score(predict_label, label_train)
     print('Accuracy: ', accuracy)
 
