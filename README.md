@@ -1,4 +1,5 @@
 # Quora Question Pairs
+[![Build Status](https://travis-ci.org/naveendennis/quoraquestionpairs.svg?branch=master)](https://travis-ci.org/naveendennis/quoraquestionpairs)
 
 ## Objective:
 
