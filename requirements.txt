@@ -1,0 +1,4 @@
+coverage
+nose
+pandas
+gensim; python_version >= '3.5'
