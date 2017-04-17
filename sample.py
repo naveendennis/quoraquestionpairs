@@ -7,6 +7,7 @@ from nltk.corpus import stopwords
 import string
 import pickle
 import nltk
+from textblob import Sentence
 from numpy.core.defchararray import *
 
 dir_name = os.path.dirname(os.path.realpath(__file__))
@@ -107,7 +108,7 @@ class PhraseVector:
 
 
 def get_phrase_vector(value):
-    return PhraseVector(value).vector
+    return PhraseVector(value)
 
 
 def get_cosine_similarity(vector1, vector2):
@@ -125,10 +126,13 @@ def get_predict_score(w2v_score):
 def get_features(features):
     phrase_vectors1 = translate(features[:, 0].astype(str), table=translator)
     phrase_vectors2 = translate(features[:, 1].astype(str), table=translator)
+    sentiment_vector1 = [Sentence(each).polarity for each in phrase_vectors1]
+    sentiment_vector2 = [Sentence(each).polarity for each in phrase_vectors2]
     phrase_vectors1 = np.vectorize(get_phrase_vector)(phrase_vectors1)
+    phrase_vectors1 = np.array([each.vector for each in phrase_vectors1])
     phrase_vectors2 = np.vectorize(get_phrase_vector)(phrase_vectors2)
-    # w2v_score = np.vectorize(get_cosine_similarity, otypes=[np.float64])(phrase_vectors1, phrase_vectors2)
-    features = np.concatenate((phrase_vectors1, phrase_vectors2), axis=1)
+    phrase_vectors2 = np.array([each.vector for each in phrase_vectors2])
+    features = np.concatenate((sentiment_vector1, sentiment_vector2, phrase_vectors1, phrase_vectors2), axis=1)
     return features
 
 if __name__ == '__main__':
@@ -149,5 +153,3 @@ if __name__ == '__main__':
     # predict_label = np.vectorize(get_predict_score)(w2v_score)
     accuracy = accuracy_score(predict_label, label_train)
     print('Accuracy: ', accuracy)
-
-
