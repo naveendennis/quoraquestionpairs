@@ -171,7 +171,7 @@ if __name__ == '__main__':
     model_filename = dir_name + '/data/google_p2v_model'
 
     if not os.path.exists(model_filename):
-        pathToBinVectors = 'data/GoogleNews-vectors-negative300.bin'
+        pathToBinVectors = dir_name+'/data/GoogleNews-vectors-negative300.bin'
         print("Loading the data file... Please wait...")
         word_model = gensim.models.KeyedVectors.load_word2vec_format(pathToBinVectors, binary=True)
         print("Successfully loaded 3.6 G bin file!")
