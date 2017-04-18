@@ -10,23 +10,6 @@ import nltk
 from textblob import Sentence
 from numpy.core.defchararray import *
 
-dir_name = os.path.dirname(os.path.realpath(__file__))
-TRAIN_FILE = dir_name + '/dataset/train.csv'
-TEST_FILE = dir_name + '/dataset/test.csv'
-THRESHOLD_VALUE = 0.8
-translator = str.maketrans(' ',' ', string.punctuation)
-
-model_filename = dir_name+'/data/google_p2v_model'
-if not os.path.exists(model_filename):
-    pathToBinVectors = 'data/GoogleNews-vectors-negative300.bin'
-    print("Loading the data file... Please wait...")
-    word_model = gensim.models.KeyedVectors.load_word2vec_format(pathToBinVectors, binary=True)
-    print("Successfully loaded 3.6 G bin file!")
-    pickle.dump(word_model, open(model_filename, 'wb'))
-else:
-    word_model = pickle.load(open(model_filename, 'rb'))
-    print('Successfully Loaded the model')
-
 
 class PhraseVector:
     def __init__(self, phrase):
@@ -107,7 +90,7 @@ class PhraseVector:
             return 0
 
 
-def get_phrase_vector(value):
+def get_phrase_vector_obj(value):
     return PhraseVector(value)
 
 
@@ -123,19 +106,79 @@ def get_predict_score(w2v_score):
     return 1 if (w2v_score) > THRESHOLD_VALUE else 0
 
 
+def get_phrase_vector(phrase_obj):
+    phrase_vector = []
+    for each in phrase_obj:
+        if type(each.vector) is np.ndarray:
+            phrase_vector = each.vector.tolist()+phrase_vector
+        else:
+            phrase_vector = [13]*300 + phrase_vector
+    return np.array([phrase_vector])
+
+
 def get_features(features):
+    row = feature_train.shape[0]
     phrase_vectors1 = translate(features[:, 0].astype(str), table=translator)
     phrase_vectors2 = translate(features[:, 1].astype(str), table=translator)
-    sentiment_vector1 = [Sentence(each).polarity for each in phrase_vectors1]
-    sentiment_vector2 = [Sentence(each).polarity for each in phrase_vectors2]
-    phrase_vectors1 = np.vectorize(get_phrase_vector)(phrase_vectors1)
-    phrase_vectors1 = np.array([each.vector for each in phrase_vectors1])
-    phrase_vectors2 = np.vectorize(get_phrase_vector)(phrase_vectors2)
-    phrase_vectors2 = np.array([each.vector for each in phrase_vectors2])
+
+    filename = dir_path+ '/data/sentiment_vectors'
+    if not os.path.exists(filename):
+        sentiment_vector1 = np.array([Sentence(each).polarity for each in phrase_vectors1]).reshape(row, 1)
+        sentiment_vector2 = np.array([Sentence(each).polarity for each in phrase_vectors2]).reshape(row, 1)
+        with open(filename, 'wb') as f:
+            pickle.dump(sentiment_vector1, f)
+            pickle.dump(sentiment_vector2, f)
+    else:
+        with open(filename, 'rb') as f:
+            sentiment_vector1 = pickle.load(f)
+            sentiment_vector2 = pickle.load(f)
+
+    filename = dir_path+ '/data/raw_phrase_vectors'
+    if not os.path.exists(filename):
+        phrase_vectors1 = np.vectorize(get_phrase_vector_obj)(phrase_vectors1)
+        phrase_vectors2 = np.vectorize(get_phrase_vector_obj)(phrase_vectors2)
+        with open(filename, 'wb') as f:
+            pickle.dump(phrase_vectors1, f)
+            pickle.dump(phrase_vectors2, f)
+    else:
+        with open(filename, 'rb') as f:
+            phrase_vectors1 = pickle.load(f)
+            phrase_vectors2 = pickle.load(f)
+
+    filename = dir_path+ '/data/processed_phrase_vectors'
+    if not os.path.exists(filename):
+        phrase_vectors1 = get_phrase_vector(phrase_vectors1).reshape(row, 300)
+        phrase_vectors2 = get_phrase_vector(phrase_vectors2).reshape(row, 300)
+        with open(filename, 'wb') as f:
+            pickle.dump(phrase_vectors1, f)
+            pickle.dump(phrase_vectors2, f)
+    else:
+        with open(filename, 'rb') as f:
+            phrase_vectors1 = pickle.load(f)
+            phrase_vectors2 = pickle.load(f)
+
     features = np.concatenate((sentiment_vector1, sentiment_vector2, phrase_vectors1, phrase_vectors2), axis=1)
     return features
 
+
 if __name__ == '__main__':
+    dir_name = os.path.dirname(os.path.realpath(__file__))
+    TRAIN_FILE = dir_name + '/dataset/train.csv'
+    TEST_FILE = dir_name + '/dataset/test.csv'
+    THRESHOLD_VALUE = 0.8
+    translator = str.maketrans(' ', ' ', string.punctuation)
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    model_filename = dir_name + '/data/google_p2v_model'
+
+    if not os.path.exists(model_filename):
+        pathToBinVectors = 'data/GoogleNews-vectors-negative300.bin'
+        print("Loading the data file... Please wait...")
+        word_model = gensim.models.KeyedVectors.load_word2vec_format(pathToBinVectors, binary=True)
+        print("Successfully loaded 3.6 G bin file!")
+        pickle.dump(word_model, open(model_filename, 'wb'))
+    else:
+        word_model = pickle.load(open(model_filename, 'rb'))
+        print('Successfully Loaded the model')
 
     train_contents = pd.read_csv(TRAIN_FILE)
     train_contents = pd.np.array(train_contents)
