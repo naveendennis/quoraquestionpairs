@@ -187,10 +187,18 @@ if __name__ == '__main__':
     labels = train_contents[:, 5].astype(int)
     features = train_contents[:, 3:5]
     from sklearn.model_selection import train_test_split
-    feature_train, label_train, feature_test, label_test = train_test_split(features, labels, train_size=0.15)
+    feature_train, feature_test, label_train, label_test = train_test_split(features, labels, train_size=0.15)
     feature_train = get_features(features=feature_train)
-    from sklearn.neural_network import MLPClassifier
-    clf = MLPClassifier(feature_train, label_train)
+    filename = dir_path + '/data/ml_percept_plain'
+    if not os.path.exists(filename):
+        from sklearn.neural_network import MLPClassifier
+        clf = MLPClassifier()
+        clf.fit(feature_train, label_train)
+        with open(filename, 'wb') as f:
+            pickle.dump(clf, f)
+    else:
+        with open(filename, 'rb') as f:
+            clf = pickle.load(f)
     predict_label = clf.predict(get_features(features=feature_test, operation='test'))
     from sklearn.metrics import accuracy_score
     # predict_label = np.vectorize(get_predict_score)(w2v_score)
