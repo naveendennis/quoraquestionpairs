@@ -116,12 +116,12 @@ def get_phrase_vector(phrase_obj):
     return np.array([phrase_vector])
 
 
-def get_features(features):
+def get_features(features, operation='train'):
     row = feature_train.shape[0]
     phrase_vectors1 = translate(features[:, 0].astype(str), table=translator)
     phrase_vectors2 = translate(features[:, 1].astype(str), table=translator)
 
-    filename = dir_path+ '/data/sentiment_vectors'
+    filename = dir_path+ '/data/sentiment_vectors_'+operation
     if not os.path.exists(filename):
         sentiment_vector1 = np.array([Sentence(each).polarity for each in phrase_vectors1]).reshape(row, 1)
         sentiment_vector2 = np.array([Sentence(each).polarity for each in phrase_vectors2]).reshape(row, 1)
@@ -133,7 +133,7 @@ def get_features(features):
             sentiment_vector1 = pickle.load(f)
             sentiment_vector2 = pickle.load(f)
 
-    filename = dir_path+ '/data/raw_phrase_vectors'
+    filename = dir_path+ '/data/raw_phrase_vectors_'+operation
     if not os.path.exists(filename):
         phrase_vectors1 = np.vectorize(get_phrase_vector_obj)(phrase_vectors1)
         phrase_vectors2 = np.vectorize(get_phrase_vector_obj)(phrase_vectors2)
@@ -145,7 +145,7 @@ def get_features(features):
             phrase_vectors1 = pickle.load(f)
             phrase_vectors2 = pickle.load(f)
 
-    filename = dir_path+ '/data/processed_phrase_vectors'
+    filename = dir_path+ '/data/processed_phrase_vectors_'+operation
     if not os.path.exists(filename):
         phrase_vectors1 = get_phrase_vector(phrase_vectors1).reshape(row, 300)
         phrase_vectors2 = get_phrase_vector(phrase_vectors2).reshape(row, 300)
@@ -188,10 +188,10 @@ if __name__ == '__main__':
     features = train_contents[:, 3:5]
     from sklearn.model_selection import train_test_split
     feature_train, label_train, feature_test, label_test = train_test_split(features, labels, train_size=0.15)
-    feature_train = get_features(feature_train)
+    feature_train = get_features(features=feature_train)
     from sklearn.neural_network import MLPClassifier
     clf = MLPClassifier(feature_train, label_train)
-    predict_label = clf.predict(get_features(features=feature_test))
+    predict_label = clf.predict(get_features(features=feature_test, operation='test'))
     from sklearn.metrics import accuracy_score
     # predict_label = np.vectorize(get_predict_score)(w2v_score)
     accuracy = accuracy_score(predict_label, label_train)
