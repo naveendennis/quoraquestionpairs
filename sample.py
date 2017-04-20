@@ -117,7 +117,7 @@ def get_phrase_vector(phrase_obj):
 
 
 def get_features(features, operation='train'):
-    row = feature_train.shape[0]
+    row = features.shape[0]
     phrase_vectors1 = translate(features[:, 0].astype(str), table=translator)
     phrase_vectors2 = translate(features[:, 1].astype(str), table=translator)
 
