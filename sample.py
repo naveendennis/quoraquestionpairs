@@ -187,7 +187,7 @@ if __name__ == '__main__':
     labels = train_contents[:, 5].astype(int)
     features = train_contents[:, 3:5]
     from sklearn.model_selection import train_test_split
-    feature_train, label_train, feature_test, label_test = train_test_split(features, labels)
+    feature_train, label_train, feature_test, label_test = train_test_split(features, labels, train_size=0.15)
     feature_train = get_features(feature_train)
     from sklearn.neural_network import MLPClassifier
     clf = MLPClassifier(feature_train, label_train)
