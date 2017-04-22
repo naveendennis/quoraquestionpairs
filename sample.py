@@ -133,6 +133,18 @@ def get_features(features, operation='train'):
             sentiment_vector1 = pickle.load(f)
             sentiment_vector2 = pickle.load(f)
 
+    filename = os.path.join(dir_path, 'data','subjective_vectors_'+operation)
+    if not os.path.exists(filename):
+        subjective_vectors1 = np.array([Sentence(each).subjectivity for each in phrase_vectors1]).reshape(row, 1)
+        subjective_vectors2 = np.array([Sentence(each).subjectivity for each in phrase_vectors2]).reshape(row, 1)
+        with open(filename, 'wb') as f:
+            pickle.dump(subjective_vectors1, f)
+            pickle.dump(subjective_vectors2, f)
+    else:
+        with open(filename, 'rb') as f:
+            subjective_vectors1 = pickle.load(f)
+            subjective_vectors2 = pickle.load(f)
+
     filename = os.path.join(dir_path, 'data', 'raw_phrase_vectors_'+operation)
     if not os.path.exists(filename):
         phrase_vectors1 = np.vectorize(get_phrase_vector_obj)(phrase_vectors1)
@@ -157,7 +169,7 @@ def get_features(features, operation='train'):
             phrase_vectors1 = pickle.load(f)
             phrase_vectors2 = pickle.load(f)
 
-    features = np.concatenate((sentiment_vector1, sentiment_vector2, phrase_vectors1, phrase_vectors2), axis=1)
+    features = np.concatenate((subjective_vectors1, subjective_vectors2, sentiment_vector1, sentiment_vector2, phrase_vectors1, phrase_vectors2), axis=1)
     return features
 
 
@@ -183,23 +195,26 @@ if __name__ == '__main__':
     train_contents = pd.read_csv(TRAIN_FILE)
     train_contents = pd.np.array(train_contents)
     header = train_contents[0]
-    train_contents = train_contents[1:]
+    train_contents = train_contents[1:80001]
     labels = train_contents[:, 5].astype(int)
     features = train_contents[:, 3:5]
     from sklearn.model_selection import train_test_split
-    feature_train, feature_test, label_train, label_test = train_test_split(features, labels, train_size=0.15)
+    feature_train, feature_test, label_train, label_test = train_test_split(features, labels, train_size=0.50)
     feature_train = get_features(features=feature_train)
-    filename = os.path.join(dir_path , 'data', 'ml_percept_plain')
+    filename = os.path.join(dir_path , 'data', 'svm_plain')
     if not os.path.exists(filename):
-        from sklearn.neural_network import MLPClassifier
-        clf = MLPClassifier()
-        clf.fit(feature_train, label_train)
+        from sklearn.svm import SVC
+        clf = SVC()
+        # clf.fit(feature_train, label_train)
         with open(filename, 'wb') as f:
             pickle.dump(clf, f)
     else:
         with open(filename, 'rb') as f:
             clf = pickle.load(f)
-    predict_label = clf.predict(get_features(features=feature_test, operation='test'))
-    from sklearn.metrics import accuracy_score
-    accuracy = accuracy_score(predict_label, label_train)
+
+
+    # predict_label = clf.predict(get_features(features=feature_test, operation='test'))
+    feature_test = get_features(features=feature_test, operation='test')
+    from sklearn.model_selection import cross_val_score
+    accuracy = cross_val_score(clf, feature_test, label_test)
     print('Accuracy: ', accuracy)
