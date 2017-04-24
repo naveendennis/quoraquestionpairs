@@ -2,4 +2,8 @@ coverage
 nose
 pandas
 nltk
+textblob
+sklearn
+fuzzywuzzy[speedup]
 gensim; python_version >= '3.5'
+

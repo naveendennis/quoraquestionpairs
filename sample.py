@@ -9,6 +9,7 @@ import pickle
 import nltk
 from textblob import Sentence
 from numpy.core.defchararray import *
+from fuzzywuzzy import fuzz
 
 
 class PhraseVector:
@@ -106,6 +107,23 @@ def get_predict_score(w2v_score):
     return 1 if (w2v_score) > THRESHOLD_VALUE else 0
 
 
+def get_cosine_similarity_vector(vector1, vector2):
+    similarity_vector = []
+    for each_v1, each_v2 in zip(vector1, vector2):
+        similarity_vector.append(get_cosine_similarity(each_v1, each_v2))
+    return np.array(similarity_vector)
+
+
+def get_fuzzy_partial_vector(phrase_obj):
+    fuzzy_partial_array = []
+    for each in phrase_obj:
+        if each is not None and type(each) is str:
+            fuzzy_partial_array.append(fuzz.partial_ratio(each))
+        else:
+            fuzzy_partial_array.append(0)
+    return np.array(fuzzy_partial_array)
+
+
 def get_phrase_vector(phrase_obj):
     phrase_vector = []
     for each in phrase_obj:
@@ -145,6 +163,18 @@ def get_features(features, operation='train'):
             subjective_vectors1 = pickle.load(f)
             subjective_vectors2 = pickle.load(f)
 
+    filename = os.path.join(dir_path, 'data','fuzzy_wuzzy_partial_ratio_'+operation)
+    if not os.path.exists(filename):
+        partial_ratio_vector1 = get_fuzzy_partial_vector(phrase_vectors1).reshape(row, 1)
+        partial_ratio_vector2= get_fuzzy_partial_vector(phrase_vectors2).reshape(row, 1)
+        with open(filename, 'wb') as f:
+            pickle.dump(partial_ratio_vector1, f)
+            pickle.dump(partial_ratio_vector2, f)
+    else:
+        with open(filename, 'rb') as f:
+            partial_ratio_vector1 = pickle.load(f)
+            partial_ratio_vector2 = pickle.load(f)
+
     filename = os.path.join(dir_path, 'data', 'raw_phrase_vectors_'+operation)
     if not os.path.exists(filename):
         phrase_vectors1 = np.vectorize(get_phrase_vector_obj)(phrase_vectors1)
@@ -156,6 +186,15 @@ def get_features(features, operation='train'):
         with open(filename, 'rb') as f:
             phrase_vectors1 = pickle.load(f)
             phrase_vectors2 = pickle.load(f)
+
+    filename = os.path.join(dir_path, 'data','cosine_similarity_vector_'+operation)
+    if not os.path.exists(filename):
+        cosine_similarity_vector = get_cosine_similarity_vector(phrase_vectors1, phrase_vectors2).reshape(row, 1)
+        with open(filename, 'wb') as f:
+            pickle.dump(cosine_similarity_vector, f)
+    else:
+        with open(filename, 'rb') as f:
+            cosine_similarity_vector = pickle.load(f)
 
     filename = os.path.join(dir_path, 'data', 'processed_phrase_vectors_'+operation)
     if not os.path.exists(filename):
@@ -169,7 +208,7 @@ def get_features(features, operation='train'):
             phrase_vectors1 = pickle.load(f)
             phrase_vectors2 = pickle.load(f)
 
-    features = np.concatenate((subjective_vectors1, subjective_vectors2, sentiment_vector1, sentiment_vector2, phrase_vectors1, phrase_vectors2), axis=1)
+    features = np.concatenate((cosine_similarity_vector, partial_ratio_vector1, partial_ratio_vector2, subjective_vectors1, subjective_vectors2, sentiment_vector1, sentiment_vector2, phrase_vectors1, phrase_vectors2), axis=1)
     return features
 
 
@@ -205,15 +244,12 @@ if __name__ == '__main__':
     if not os.path.exists(filename):
         from sklearn.svm import SVC
         clf = SVC()
-        # clf.fit(feature_train, label_train)
         with open(filename, 'wb') as f:
             pickle.dump(clf, f)
     else:
         with open(filename, 'rb') as f:
             clf = pickle.load(f)
 
-
-    # predict_label = clf.predict(get_features(features=feature_test, operation='test'))
     feature_test = get_features(features=feature_test, operation='test')
     from sklearn.model_selection import cross_val_score
     accuracy = cross_val_score(clf, feature_test, label_test)
