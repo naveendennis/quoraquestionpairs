@@ -10,7 +10,7 @@ import nltk
 from textblob import Sentence
 from numpy.core.defchararray import *
 from fuzzywuzzy import fuzz
-
+from sklearn.metrics.pairwise import cosine_similarity
 
 class PhraseVector:
     def __init__(self, phrase):
@@ -36,7 +36,7 @@ class PhraseVector:
     def phrase_to_vec(self, phrase):
         _stop_words = stopwords.words("english")
         phrase = phrase.lower()
-        verified_words = [word for word in phrase.split() if word not in _stop_words]
+        verified_words = [word for word in phrase.split()]
         vector_set = []
         for each_word in verified_words:
             try:
@@ -136,6 +136,7 @@ def get_phrase_vector(phrase_obj):
 
 def get_features(features, operation='train'):
     row = features.shape[0]
+    operation = operation+'.den'
     phrase_vectors1 = translate(features[:, 0].astype(str), table=translator)
     phrase_vectors2 = translate(features[:, 1].astype(str), table=translator)
 
@@ -162,6 +163,33 @@ def get_features(features, operation='train'):
         with open(filename, 'rb') as f:
             subjective_vectors1 = pickle.load(f)
             subjective_vectors2 = pickle.load(f)
+
+    filename = os.path.join(dir_path, 'data', 'shared_tokens_' + operation)
+    if not os.path.exists(filename):
+        shared_token_vector = [0] * len(phrase_vectors1)
+        current_index = 0
+        for each_question1, each_question2 in zip(phrase_vectors1, phrase_vectors2):
+            shared_tokens = 0
+            for each_word1 in each_question1.split(' '):
+                if each_word1 not in stopwords.words('english'):
+                    for each_word2 in each_question2.split(' '):
+                        try:
+                            wv1 = word_model[each_word1]
+                            wv2 = word_model[each_word2]
+                            if each_word2 not in stopwords.words('english') and cosine_similarity(wv1, wv2)[0][
+                                0] >= 0.6:
+                                shared_tokens += 1
+                        except:
+                            if each_word1 == each_word2:
+                                shared_tokens += 1
+            shared_token_vector[current_index] = shared_tokens
+            current_index += 1
+
+        with open(filename, 'wb') as f:
+            pickle.dump(shared_token_vector, f)
+    else:
+        with open(filename, 'rb') as f:
+            shared_token_vector = pickle.load(f)
 
     filename = os.path.join(dir_path, 'data','fuzzy_wuzzy_partial_ratio_'+operation)
     if not os.path.exists(filename):
@@ -208,7 +236,7 @@ def get_features(features, operation='train'):
             phrase_vectors1 = pickle.load(f)
             phrase_vectors2 = pickle.load(f)
 
-    features = np.concatenate((cosine_similarity_vector, partial_ratio_vector1, partial_ratio_vector2, subjective_vectors1, subjective_vectors2, sentiment_vector1, sentiment_vector2, phrase_vectors1, phrase_vectors2), axis=1)
+    features = np.concatenate((shared_token_vector, cosine_similarity_vector, partial_ratio_vector1, partial_ratio_vector2, subjective_vectors1, subjective_vectors2, sentiment_vector1, sentiment_vector2, phrase_vectors1, phrase_vectors2), axis=1)
     return features
 
 
